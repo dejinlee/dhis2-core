@@ -30,12 +30,14 @@ package org.hisp.dhis.dxf2.metadata;
 
 import com.google.common.collect.Lists;
 import org.hisp.dhis.common.IdentifiableObject;
+import org.hisp.dhis.commons.collection.CollectionUtils;
 import org.hisp.dhis.fieldfilter.Defaults;
 import org.hisp.dhis.node.config.InclusionStrategy;
 import org.hisp.dhis.query.Query;
 import org.hisp.dhis.user.User;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -47,6 +49,13 @@ import java.util.Set;
  */
 public class MetadataExportParams
 {
+
+    /**
+     * Field filtering elements needed to ignore sharing
+     */
+    private static final List<String> SHARING_FIELDS = Arrays.asList(
+            "!user", "!publicAccess", "!userGroupAccesses", "!userAccesses", "!externalAccess" );
+
     /**
      * User to use for sharing filtering.
      */
@@ -91,6 +100,11 @@ public class MetadataExportParams
      * Inclusion strategy to use. There are a few already defined inclusions in the Inclusions enum.
      */
     private InclusionStrategy inclusionStrategy = InclusionStrategy.Include.NON_NULL;
+
+    /**
+     * Indicates whether sharing properties should be included in the export.
+     */
+    private boolean skipSharing;
 
     public MetadataExportParams()
     {
@@ -146,7 +160,15 @@ public class MetadataExportParams
 
     public MetadataExportParams addFields( Class<? extends IdentifiableObject> klass, List<String> classFields )
     {
-        if ( !fields.containsKey( klass ) ) fields.put( klass, classFields );
+        if ( !fields.containsKey( klass ) )
+        {
+            fields.put( klass, classFields );
+        }
+
+        if ( skipSharing )
+        {
+            CollectionUtils.addAllUnique( fields.get( klass ), SHARING_FIELDS );
+        }
 
         fields.get( klass ).addAll( classFields );
         return this;
@@ -206,5 +228,19 @@ public class MetadataExportParams
     public void setInclusionStrategy( InclusionStrategy inclusionStrategy )
     {
         this.inclusionStrategy = inclusionStrategy;
+    }
+
+    public void setSkipSharing( boolean skipSharing )
+    {
+        if ( skipSharing )
+        {
+            CollectionUtils.addAllUnique( defaultFields, SHARING_FIELDS );
+        }
+        else
+        {
+            defaultFields.removeAll( SHARING_FIELDS );
+        }
+
+        this.skipSharing = skipSharing;
     }
 }
